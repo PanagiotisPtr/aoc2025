@@ -3,9 +3,13 @@ package com.panagiotispetridis.day1;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-public class Parser {
+public class Parser extends com.panagiotispetridis.common.Parser<Input> {
 
-    public static Input parse(Scanner scanner) {
+    public Parser(Scanner scanner) {
+        super(scanner);
+    }
+
+    public Input parse() {
         Input input = new Input(new ArrayList<>());
 
         while(scanner.hasNextLine()) {
@@ -14,4 +18,5 @@ public class Parser {
 
         return input;
     }
+
 }

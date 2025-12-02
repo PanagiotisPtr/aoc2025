@@ -11,8 +11,10 @@ public class Main {
 
     public static void main(String[] args) {
         InputStream is = Main.class.getResourceAsStream("/day1/input1.in");
+        assert is != null;
         try (Scanner scanner = new Scanner(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            Input input = Parser.parse(scanner);
+            Parser parser = new Parser(scanner);
+            Input input = parser.parse();
             Solver<Input, Output> solver = new Day1(true /* part2 */);
             Output output = solver.solve(input);
 
