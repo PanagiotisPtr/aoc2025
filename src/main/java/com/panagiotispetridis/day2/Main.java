@@ -54,21 +54,6 @@ public class Main {
             this.part2 = part2;
         }
 
-        boolean isInvalidId(String id, int splits) {
-            if (id.length() % splits != 0) {
-                return false;
-            }
-            for (int i = 0; i < id.length() / splits; i++) {
-                for (int j = 1; j < splits; j++) {
-                    if (id.charAt(i) != id.charAt(i + (id.length() / splits) * j)) {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
         BigInteger invalidIdSumAnyTimes(Range range, int splitsLimit) {
             Stack<String> stack = new Stack<>();
             BigInteger sum = new BigInteger("0");
@@ -84,7 +69,7 @@ public class Main {
                 }
                 int splits = 2;
                 while (splits <= splitsLimit && id.compareTo(range.upperBound) <= 0) {
-                    if (!seen.contains(id.toString()) && id.compareTo(range.lowerBound) >= 0 && isInvalidId(id.toString(), splits)) {
+                    if (!seen.contains(id.toString()) && id.compareTo(range.lowerBound) >= 0) {
                         sum = sum.add(id);
                         seen.add(id.toString());
                     }
