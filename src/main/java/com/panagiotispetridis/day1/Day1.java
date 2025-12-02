@@ -14,23 +14,16 @@ public class Day1 implements Solver<Input, Output> {
         Dial d = new Dial();
         long password = 0;
 
-        //989
         for (Rotation r : input.rotations()) {
-            System.out.println("Dial at: " + d.getValue());
-            System.out.println("Rotating at: " + r);
             long throughZero = r.amount() / 100L;
             switch (r.direction()) {
                 case LEFT -> {
-                    System.out.println("Need to left: " + d.distanceToZeroLeft());
                     if (d.getValue() != 0 && d.distanceToZeroLeft() < r.amount() % 100) {
-                        System.out.println("Went through 0 left");
                         throughZero++;
                     }
                 }
                 case RIGHT -> {
-                    System.out.println("Need to right: " + d.distanceToZeroRight());
                     if (d.getValue() != 0 && d.distanceToZeroRight() < r.amount() % 100) {
-                        System.out.println("Went through 0 right");
                         throughZero++;
                     }
                 }
