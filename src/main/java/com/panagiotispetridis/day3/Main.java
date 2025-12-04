@@ -43,8 +43,6 @@ public class Main {
                 this.part2 = part2;
             }
 
-            record CacheEntry(int idx, int picksLeft) {}
-
             long pow(long base, long exp) {
                 long result = 1;
                 for (long i = 0; i < exp; i++) {
