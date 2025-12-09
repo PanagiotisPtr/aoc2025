@@ -207,50 +207,101 @@ public class Main {
             return true;
         }
 
-        Candidate closestPair(int l, int r, List<Point> points, Set<PointPair> connected) {
-            if (r - l <= 3) {
-                Candidate c = new Candidate(null, null, Long.MAX_VALUE);
-                for (int i = l; i < r; i++) {
-                    for (int j = i + 1; j < r; j++) {
-                        Point p1 = points.get(i);
-                        Point p2 = points.get(j);
-                        if (connected.contains(new PointPair(p1, p2))) {
-                            continue;
-                        }
-                        c = Candidate.min(c, new Candidate(p1, p2, p1.distance(p2)));
-                    }
-                }
-                return c;
+        Candidate closestPair(List<Point> pointsByX, List<Point> pointsByY, Set<PointPair> connected) {
+            return closestPairRec(pointsByX, pointsByY, connected);
+        }
+
+        // Shamos-Hoey 1975
+        private Candidate closestPairRec(List<Point> px, List<Point> py, Set<PointPair> connected) {
+            int n = px.size();
+            if (n <= 3) {
+                return bruteForceClosest(px, connected);
             }
 
-            int m = (l + r) / 2;
-            long midx = points.get(m).x;
-            Candidate left = closestPair(l, m, points, connected);
-            Candidate right = closestPair(m, r, points, connected);
+            int mid = n / 2;
+            Point midPoint = px.get(mid);
+            long midX = midPoint.x;
+
+            List<Point> pxL = px.subList(0, mid);
+            List<Point> pxR = px.subList(mid, n);
+
+            Set<Point> leftSet = new HashSet<>(pxL);
+
+            List<Point> pyL = new ArrayList<>(mid);
+            List<Point> pyR = new ArrayList<>(n - mid);
+            for (Point p : py) {
+                if (leftSet.contains(p)) {
+                    pyL.add(p);
+                } else {
+                    pyR.add(p);
+                }
+            }
+
+            Candidate left = closestPairRec(pxL, pyL, connected);
+            Candidate right = closestPairRec(pxR, pyR, connected);
             Candidate best = Candidate.min(left, right);
+            long bestDist = (best == null) ? Long.MAX_VALUE : best.distance();
 
-            for (int i = l; i < m; i++) {
-                Point p1 = points.get(i);
-                long dist = Math.abs(p1.x - midx);
-                if (dist*dist >= best.distance()) {
-                    continue;
-                }
-                for (int j = m; j < r; j++) {
-                    Point p2 = points.get(j);
-                    dist = Math.abs(p2.x - midx);
-                    if (dist*dist >= best.distance()) {
-                        continue;
-                    }
-                    if (p1.distance(p2) > best.distance()) {
-                        continue;
-                    }
-                    if (connected.contains(new PointPair(p1, p2))) {
-                        continue;
-                    }
-                    best = Candidate.min(best, new Candidate(p1, p2, p1.distance(p2)));
+            List<Point> strip = new ArrayList<>();
+            for (Point p : py) {
+                long dx = p.x - midX;
+                if (dx * dx < bestDist) {
+                    strip.add(p);
                 }
             }
 
+            for (int i = 0; i < strip.size(); i++) {
+                Point p = strip.get(i);
+                for (int j = i + 1; j < strip.size(); j++) {
+                    Point q = strip.get(j);
+
+                    long dy = q.y - p.y;
+                    if (dy * dy >= bestDist) {
+                        break;
+                    }
+
+                    long dz = q.z - p.z;
+                    if (dz * dz >= bestDist) {
+                        continue;
+                    }
+
+                    PointPair pair = new PointPair(p, q);
+                    if (connected.contains(pair)) {
+                        continue;
+                    }
+
+                    long d2 = p.distance(q);
+                    if (d2 < bestDist) {
+                        bestDist = d2;
+                        best = new Candidate(p, q, d2);
+                    }
+                }
+            }
+
+            return best;
+        }
+
+        private Candidate bruteForceClosest(List<Point> pts, Set<PointPair> connected) {
+            Candidate best = null;
+            long bestDist = Long.MAX_VALUE;
+            int n = pts.size();
+            for (int i = 0; i < n; i++) {
+                for (int j = i + 1; j < n; j++) {
+                    Point p = pts.get(i);
+                    Point q = pts.get(j);
+
+                    PointPair pair = new PointPair(p, q);
+                    if (connected.contains(pair)) {
+                        continue;
+                    }
+
+                    long d2 = p.distance(q);
+                    if (d2 < bestDist) {
+                        bestDist = d2;
+                        best = new Candidate(p, q, d2);
+                    }
+                }
+            }
             return best;
         }
 
@@ -258,24 +309,38 @@ public class Main {
         public Output solve(Input input) {
             long count = 1000;
             long part2Ans = 0;
-            input.points().sort(Point::compareX);
+
+            List<Point> pointsByX = new ArrayList<>(input.points());
+            pointsByX.sort(Point::compareX);
+
+            List<Point> pointsByY = new ArrayList<>(input.points());
+            pointsByY.sort(Point::compareY);
+
             Set<PointPair> connected = new HashSet<>();
+
             for (int i = 0; part2 || i < count; i++) {
-                Candidate c = closestPair(0, input.points().size(), input.points(), connected);
+                Candidate c = closestPair(pointsByX, pointsByY, connected);
+                if (c == null) {
+                    break;
+                }
+
                 c.p2().setParent(c.p1().rootParent());
+
                 if (allSameParent(input.points())) {
                     part2Ans = c.p1().x * c.p2().x;
                     break;
                 }
+
                 connected.add(new PointPair(c.p1(), c.p2()));
             }
+
             if (part2) {
                 return new Output(part2Ans);
             }
 
             List<Circuit> circuits = Circuit.fromPoints(input.points());
             long answer = 1;
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 3 && i < circuits.size(); i++) {
                 answer *= circuits.get(i).size;
             }
             return new Output(answer);
