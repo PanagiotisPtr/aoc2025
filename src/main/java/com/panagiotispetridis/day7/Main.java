@@ -108,8 +108,8 @@ public class Main {
                 if (obj == null) {
                     return false;
                 }
-                if (obj instanceof Frame(int y1, int x1)) {
-                    return x1 == x && y1 == y;
+                if (obj instanceof Frame other) {
+                    return other.x() == x && other.y() == y;
                 }
 
                 return false;

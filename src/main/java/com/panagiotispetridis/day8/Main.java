@@ -177,7 +177,9 @@ public class Main {
         record PointPair(Point p1, Point p2) {
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof PointPair(Point p3, Point p4)) {
+                if (obj instanceof PointPair other) {
+                    Point p3 = other.p1();
+                    Point p4 = other.p2();
                     return (p1.alias + p2.alias).equals(p3.alias + p4.alias) ||
                             (p2.alias + p1.alias).equals(p3.alias + p4.alias);
                 }
