@@ -233,68 +233,94 @@ public class Main {
             }
         }
 
+        // AI GENERATED - I can't write DLX :(
         private boolean canFitDLX(List<Shape> shapes, Query q) {
             int W = q.grid().w;
             int H = q.grid().h;
             int gridCells = W * H;
             List<Integer> counts = q.counts();
 
-            // Columns = grid cells + one shape column per shape
-            int shapeCount = shapes.size();
-            int COLS = gridCells + shapeCount;
+            // Quick prune: total required area > grid cells
+            int totalCells = 0;
+            for (int i = 0; i < shapes.size(); i++) {
+                totalCells += shapes.get(i).cells.size() * counts.get(i);
+            }
+            if (totalCells > gridCells) {
+                return false;
+            }
 
-            // Count how many rows will exist (upper bound for DLX row allocation)
-            int estimatedRows = 0;
+            int shapeCount = shapes.size();
+            int[] required = new int[shapeCount];
+            for (int i = 0; i < shapeCount; i++) {
+                required[i] = counts.get(i);
+            }
+
+            // Estimate max rows (placements) and max row length
+            int estimatedShapeRows = 0;
+            int maxRowLen = 0;
+
             for (int si = 0; si < shapes.size(); si++) {
                 int cnt = counts.get(si);
                 if (cnt == 0) continue;
-                Shape base = shapes.get(si);
-                List<Shape> orientations = base.orientations();
-                for (Shape o : orientations)
-                    estimatedRows += (H - o.h + 1) * (W - o.w + 1);
-            }
-
-            DLX dlx = new DLX(COLS, estimatedRows);
-
-            // Mark each shape column with required count
-            for (int si = 0; si < shapes.size(); si++) {
-                dlx.setWeightedRequirement(gridCells + si, counts.get(si));
-            }
-
-            int nextRowId = 0;
-
-            // Generate each placement row (ONE row per placement)
-            for (int si = 0; si < shapes.size(); si++) {
-
-                if (counts.get(si) == 0) continue;
 
                 Shape base = shapes.get(si);
-                List<Shape> orientations = base.orientations();
+                maxRowLen = Math.max(maxRowLen, base.cells.size());
 
-                int shapeColumn = gridCells + si;
+                for (Shape o : base.orientations()) {
+                    int placementsForOrientation = (H - o.h + 1) * (W - o.w + 1);
+                    if (placementsForOrientation > 0) {
+                        estimatedShapeRows += placementsForOrientation;
+                    }
+                }
+            }
+
+            // + one "empty cell" row per grid cell
+            int estimatedRows = estimatedShapeRows + gridCells;
+            if (estimatedRows == 0) {
+                // no shapes required -> trivially fits
+                return true;
+            }
+
+            // DLX with:
+            //  - gridCells primary columns (one per cell)
+            //  - shapeCount shapes with required counts
+            //  - estimatedRows max rows (shape placements + empty rows)
+            //  - maxRowLen max row size (cells per biggest shape)
+            DLX dlx = new DLX(gridCells, shapeCount, estimatedRows, maxRowLen, required);
+
+            // Generate all shape-placement rows
+            for (int si = 0; si < shapes.size(); si++) {
+                int cnt = counts.get(si);
+                if (cnt == 0) continue;   // this shape is not used in this query
+
+                Shape base = shapes.get(si);
+                var orientations = base.orientations();
 
                 for (Shape o : orientations) {
                     for (int y = 0; y <= H - o.h; y++) {
                         for (int x = 0; x <= W - o.w; x++) {
 
-                            int[] columns = new int[o.cells.size() + 1];
+                            int[] cols = new int[o.cells.size()];
                             int k = 0;
 
-                            // Grid cell constraints
                             for (Shape.Cell c : o.cells) {
                                 int gx = x + c.x();
                                 int gy = y + c.y();
-                                columns[k++] = gy * W + gx;
+                                cols[k++] = gy * W + gx;
                             }
 
-                            // Shape column constraint
-                            columns[k] = shapeColumn;
-
-                            dlx.addRow(columns, si);
-                            nextRowId++;
+                            // One row per placement, tagged with shape index
+                            dlx.addRow(cols, si);
                         }
                     }
                 }
+            }
+
+            // Add "empty cell" rows: each cell can be left empty
+            for (int cell = 0; cell < gridCells; cell++) {
+                int[] cols = new int[]{cell};
+                // shapeId = -1 means "no shape" – doesn't affect counts
+                dlx.addRow(cols, -1);
             }
 
             return dlx.solveExists();

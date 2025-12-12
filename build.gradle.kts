@@ -24,20 +24,35 @@ application {
 
 graalvmNative {
     toolchainDetection = false
+
     binaries {
         named("main") {
             imageName.set("day12")
             fallback.set(false)
-            buildArgs.add("-O3")
-            buildArgs.add("--enable-preview")
+
+            // 🚀 HIGH-PERFORMANCE NATIVE IMAGE OPTIMIZATIONS (by AI)
+            buildArgs.addAll(listOf(
+                "-O3",
+                "--gc=epsilon",
+                "-H:+InlineEverything",
+                "-H:+UnlockExperimentalVMOptions",
+                "-H:Optimize=2",
+                "--enable-preview"
+            ))
+        }
+
+        // Optional: Add PGO
+        create("pgo") {
+            imageName.set("day12-pgo")
+            fallback.set(false)
+            buildArgs.addAll(listOf(
+                "-O3",
+                "--gc=g1",
+                "-H:InlineEverything=true",
+                "-H:Optimize=2",
+                "--enable-preview",
+                "--pgo-instrument"
+            ))
         }
     }
-}
-
-tasks.withType<JavaExec> {
-    jvmArgs = listOf(
-        "-XX:+UseZGC",
-        "-Xms8g",
-        "-Xmx8g"
-    )
 }
